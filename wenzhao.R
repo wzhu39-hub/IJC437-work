@@ -75,7 +75,11 @@ ggplot(hits_plot, aes(x = chart_group, y = loudness)) +
     title = "Loudness of Top 10 vs other year-end hits",
     x = "Chart group",
     y = "Loudness (dB)")
+#Test-set
+test_prob <- predict(logit_mod, newdata = test_df, type = "response")
+test_pred <- if_else(test_prob >= 0.5, 1, 0)
 
+mean(test_pred == test_df$is_top10)
 summary(logit_mod)
 #RQ3
 #only audio
@@ -98,3 +102,31 @@ ggplot(pca_df, aes(x = PC1, y = PC2, colour = year)) +
     x = "PC1",
     y = "PC2",
     colour = "Year")
+#K-means
+set.seed(250)  
+pca_for_cluster <- pca_df %>% 
+  select(PC1, PC2, PC3)
+
+k3 <- kmeans(pca_for_cluster, centers = 3, nstart = 20)
+pca_df <- pca_df %>% 
+mutate(cluster = factor(k3$cluster))
+ggplot(pca_df, aes(x = PC1, y = PC2, colour = cluster)) +
+geom_point(alpha = 0.5) +
+  labs(
+    title = "PCA of audio features with k-means clusters (k = 3)",
+    x = "PC1",
+    y = "PC2",
+    colour = "Cluster")
+
+cluster_summary <- model_data %>% 
+  mutate(cluster = pca_df$cluster) %>% 
+  group_by(cluster) %>% 
+  summarise(
+    n_songs      = n(),
+    mean_ranking = mean(ranking, na.rm = TRUE),
+    prop_top10   = mean(is_top10, na.rm = TRUE),
+    mean_valence = mean(valence, na.rm = TRUE),
+    mean_energy  = mean(energy, na.rm = TRUE),
+    mean_loudness = mean(loudness, na.rm = TRUE),
+    mean_danceability = mean(danceability, na.rm = TRUE))
+cluster_summary
